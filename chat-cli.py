@@ -11,7 +11,7 @@ class ChatClient:
         self.server_address = (TARGET_IP,TARGET_PORT)
         self.sock.connect(self.server_address)
 
-        self.tokenid=""
+        self.tokenid = ""
 
     def proses(self, cmdline):
         j = cmdline.split(" ")
@@ -50,13 +50,14 @@ class ChatClient:
 
                 print("diterima dari server",data)
 
-                if (data):
+                if data:
                     receivemsg = "{}{}" . format(receivemsg, data.decode()) # data harus didecode agar dapat di operasikan dalam bentuk string
 
                     if receivemsg[-4:] == '\r\n\r\n':
                         print("end of string")
                         return json.loads(receivemsg)
-        except:
+        except Exception as e:
+            print(str(e))
             self.sock.close()
 
             return {
@@ -104,5 +105,5 @@ if __name__ == "__main__":
     cc = ChatClient()
 
     while True:
-        cmdline = input("Command {}:" . format(cc.tokenid))
+        cmdline = input("Command {} : " . format(cc.tokenid))
         print(cc.proses(cmdline))

@@ -34,7 +34,6 @@ class ProcessTheClient(threading.Thread):
 					logging.warning("balas ke  client: {}" . format(hasil))
 					self.connection.sendall(hasil.encode())
 					rcv = ""
-					break
 			else:
 				break
 
