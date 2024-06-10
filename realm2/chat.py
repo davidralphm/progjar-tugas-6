@@ -12,6 +12,7 @@ class Chat:
 	def __init__(self):
 		self.sessions = {}
 		self.users = {}
+		self.groups = {}
 
 		self.users['test1'] = {
 			'nama': 'Test 1',
@@ -35,6 +36,27 @@ class Chat:
 			'password': 'surabaya',
 			'incoming': {},
 			'outgoing':{}
+		}
+
+		self.groups['group1'] = {
+			'messi',
+			'henderson',
+			'lineker'
+		}
+
+		self.groups['group2'] = {
+			'test1',
+			'test2',
+			'test3'
+		}
+
+		self.groups['group3'] = {
+			'messi',
+			'henderson',
+			'lineker',
+			'test1',
+			'test2',
+			'test3'
 		}
 
 	def proses(self,data):
