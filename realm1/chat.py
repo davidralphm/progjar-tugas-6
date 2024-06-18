@@ -3,6 +3,7 @@ import os
 import json
 import uuid
 import logging
+import socket
 from queue import  Queue
 
 REALM_0_ADDRESS = (('127.0.0.1', 9000))
@@ -86,6 +87,18 @@ class Chat:
 				logging.warning("SEND: session {} send message from {} to {}" . format(sessionid, usernamefrom, usernameto))
 				
 				return self.send_message(sessionid, usernamefrom, usernameto, message)
+			elif (command == 'send_multirealm'):
+				usernamefrom = j[1].strip()
+				usernameto = j[2].strip()
+
+				message = ""
+
+				for w in j[3:]:
+					message = "{} {}" . format(message, w)
+
+				logging.warning("SEND_MULTIREALM: send message from {} to {}" . format(usernamefrom, usernameto))
+				
+				return self.send_message_multirealm(usernamefrom, usernameto, message)
 			elif (command == 'inbox'):
 				sessionid = j[1].strip()
 				username = self.sessions[sessionid]['username']
@@ -149,11 +162,43 @@ class Chat:
 		s_fr = self.get_user(username_from)
 		s_to = self.get_user(username_dest)
 		
-		if (s_fr == False or s_to == False):
+		if (s_fr == False):
 			return {
 				'status': 'ERROR',
 				'message': 'User Tidak Ditemukan'
 			}
+	
+		if (s_to == False):
+			command = f'send_multirealm {username_from} {username_dest} {message}'.encode(encoding='utf-8')
+			recv = ''
+			result = {
+				'status' : 'ERROR',
+				'message' : 'Gagal'
+			}
+
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			try:
+				sock.connect(REALM_1_ADDRESS)
+				sock.sendall(command)
+
+				while True:
+					data = sock.recv(64)
+
+					if data:
+						recv = f'{recv} {data.decode()}'
+
+						if recv[-4:] == '\r\n\r\n':
+							print('end')
+							result = json.loads(recv)
+
+							sock.close()
+							break
+
+				sock.close()
+			except Exception as e:
+				print(str(e))
+
+			return result
 
 		message = {
 			'msg_from': s_fr['nama'],
@@ -169,6 +214,34 @@ class Chat:
 		except KeyError:
 			outqueue_sender[username_from] = Queue()
 			outqueue_sender[username_from].put(message)
+
+		try:
+			inqueue_receiver[username_from].put(message)
+		except KeyError:
+			inqueue_receiver[username_from] = Queue()
+			inqueue_receiver[username_from].put(message)
+
+		return {
+			'status': 'OK',
+			'message': 'Message Sent'
+		}
+	
+	def send_message_multirealm(self, username_from, username_dest, message):
+		s_to = self.get_user(username_dest)
+	
+		if (s_to == False):
+			return {
+				'status': 'ERROR',
+				'message': 'User Tidak Ditemukan'
+			}
+
+		message = {
+			'msg_from': username_from,
+			'msg_to': s_to['nama'],
+			'msg': message
+		}
+
+		inqueue_receiver = s_to['incoming']
 
 		try:
 			inqueue_receiver[username_from].put(message)
