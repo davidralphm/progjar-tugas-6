@@ -6,8 +6,8 @@ import logging
 import socket
 from queue import  Queue
 
-REALM_0_ADDRESS = (('127.0.0.1', 9000))
-REALM_1_ADDRESS = (('127.0.0.1', 9001))
+REALM_1_ADDRESS = (('127.0.0.1', 9000))
+REALM_2_ADDRESS = (('127.0.0.1', 9001))
 
 class Chat:
 	def __init__(self):
@@ -98,7 +98,7 @@ class Chat:
 
 				logging.warning("SEND_MULTIREALM: send message from {} to {}" . format(usernamefrom, usernameto))
 				
-				return self.send_message_multirealm(usernamefrom, usernameto, message)
+				return self.recv_message_multirealm(usernamefrom, usernameto, message)
 			elif (command == 'inbox'):
 				sessionid = j[1].strip()
 				username = self.sessions[sessionid]['username']
@@ -152,92 +152,121 @@ class Chat:
 
 		return self.users[username]
 
+	def get_group(self, group):
+		if (group not in self.groups):
+			return False
+
+		return self.groups[group]
+
+	def send_another_realm(self, username_from, username_dest, message):
+		command = f'send_multirealm {username_from} {username_dest} {message}'.encode(encoding='utf-8')
+		recv = ''
+		result = {
+			'status' : 'ERROR',
+			'message' : 'Gagal'
+		}
+
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		try:
+			sock.connect(REALM_1_ADDRESS)
+			sock.sendall(command)
+
+			while True:
+				data = sock.recv(64)
+
+				if data:
+					recv = f'{recv} {data.decode()}'
+
+					if recv[-4:] == '\r\n\r\n':
+						print('end')
+						result = json.loads(recv)
+
+						sock.close()
+						break
+
+			sock.close()
+		except Exception as e:
+			print(str(e))
+
+		return result
+
 	def send_message(self, sessionid, username_from, username_dest, message):
+		# Cek session
 		if (sessionid not in self.sessions):
 			return {
 				'status': 'ERROR',
 				'message': 'Session Tidak Ditemukan'
 			}
 
+		# Cek user pengirim
 		s_fr = self.get_user(username_from)
-		s_to = self.get_user(username_dest)
-		
+
+		# Jika user pengirim tidak ada
 		if (s_fr == False):
 			return {
 				'status': 'ERROR',
 				'message': 'User Tidak Ditemukan'
 			}
-	
-		if (s_to == False):
-			command = f'send_multirealm {username_from} {username_dest} {message}'.encode(encoding='utf-8')
-			recv = ''
-			result = {
-				'status' : 'ERROR',
-				'message' : 'Gagal'
-			}
+		
+		# Coba kirim private message
+		result = self.send_message_private(username_from, username_dest, message)
 
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			try:
-				sock.connect(REALM_0_ADDRESS)
-				sock.sendall(command)
-
-				while True:
-					data = sock.recv(64)
-
-					if data:
-						recv = f'{recv} {data.decode()}'
-
-						if recv[-4:] == '\r\n\r\n':
-							print('end')
-							result = json.loads(recv)
-
-							sock.close()
-							break
-
-				sock.close()
-			except Exception as e:
-				print(str(e))
-
+		if result['status'] == 'OK':
 			return result
 
-		message = {
-			'msg_from': s_fr['nama'],
-			'msg_to': s_to['nama'],
-			'msg': message
-		}
+		# Coba kirim group message
+		result = self.send_message_group(username_from, username_dest, message)
 
-		outqueue_sender = s_fr['outgoing']
-		inqueue_receiver = s_to['incoming']
+		if result['status'] == 'OK':
+			return result
 		
-		try:	
-			outqueue_sender[username_from].put(message)
-		except KeyError:
-			outqueue_sender[username_from] = Queue()
-			outqueue_sender[username_from].put(message)
+		# Coba kirim multi - realm message
+		return self.send_another_realm(username_from, username_dest, message)
 
-		try:
-			inqueue_receiver[username_from].put(message)
-		except KeyError:
-			inqueue_receiver[username_from] = Queue()
-			inqueue_receiver[username_from].put(message)
+	def send_message_private(self, username_from, username_dest, message):
+		s_to = self.get_user(username_dest)
+
+		# Jika user tujuan tidak ditemukan di realm ini
+		if s_to == False:
+			return {
+				'status': 'ERROR',
+				'message': 'User / Group Tidak Ditemukan'
+			}
+
+		self.put_message_in_inbox(username_from, username_dest, message)
 
 		return {
 			'status': 'OK',
 			'message': 'Message Sent'
 		}
-	
-	def send_message_multirealm(self, username_from, username_dest, message):
-		s_to = self.get_user(username_dest)
-	
-		if (s_to == False):
+
+	def send_message_group(self, username_from, username_dest, message):
+		s_to = self.get_group(username_dest)
+
+		# Jika group tujuan tidak ditemukan di realm ini
+		if s_to == False:
 			return {
 				'status': 'ERROR',
-				'message': 'User Tidak Ditemukan'
+				'message': 'User / Group Tidak Ditemukan'
 			}
+
+		for user in s_to:
+			self.put_message_in_inbox(username_dest, user, f'({username_from}): {message}')
+		
+		return {
+			'status': 'OK',
+			'message': 'Message Sent'
+		}
+	
+	def put_message_in_inbox(self, username_from, username_dest, message):
+		s_to = self.get_user(username_dest)
+
+		if s_to == False:
+			return
 
 		message = {
 			'msg_from': username_from,
-			'msg_to': s_to['nama'],
+			'msg_to': username_dest,
 			'msg': message
 		}
 
@@ -248,11 +277,14 @@ class Chat:
 		except KeyError:
 			inqueue_receiver[username_from] = Queue()
 			inqueue_receiver[username_from].put(message)
+		
+	def recv_message_multirealm(self, username_from, username_dest, message):
+		result = self.send_message_private(username_from, username_dest, message)
 
-		return {
-			'status': 'OK',
-			'message': 'Message Sent'
-		}
+		if result['status'] == 'OK':
+			return result
+		
+		return self.send_message_group(username_from, username_dest, message)
 
 	def get_inbox(self, username):
 		s_fr = self.get_user(username)
@@ -269,7 +301,6 @@ class Chat:
 			'status': 'OK',
 			'messages': msgs
 		}
-
 
 if __name__ == "__main__":
 	j = Chat()
