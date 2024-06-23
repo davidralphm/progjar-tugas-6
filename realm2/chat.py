@@ -39,22 +39,7 @@ class Chat:
 			'outgoing':{}
 		}
 
-		self.groups['group1'] = {
-			'messi',
-			'henderson',
-			'lineker'
-		}
-
 		self.groups['group2'] = {
-			'test1',
-			'test2',
-			'test3'
-		}
-
-		self.groups['group3'] = {
-			'messi',
-			'henderson',
-			'lineker',
 			'test1',
 			'test2',
 			'test3'
@@ -175,13 +160,11 @@ class Chat:
 				data = sock.recv(64)
 
 				if data:
-					recv = f'{recv} {data.decode()}'
+					recv = f'{recv}{data.decode()}'
 
 					if recv[-4:] == '\r\n\r\n':
 						print('end')
 						result = json.loads(recv)
-
-						sock.close()
 						break
 
 			sock.close()
@@ -250,8 +233,18 @@ class Chat:
 				'message': 'User / Group Tidak Ditemukan'
 			}
 
+		# Jika user tidak ada di dalam group ini
+		if username_from not in s_to:
+			return {
+				'status': 'ERROR',
+				'message': 'User / Group Tidak Ditemukan'
+			}
+
 		for user in s_to:
-			self.put_message_in_inbox(username_dest, user, f'({username_from}): {message}')
+			if user in self.users:
+				self.put_message_in_inbox(username_dest, user, f'({username_from}): {message}')
+			else:
+				self.send_another_realm(username_dest, user, f'({username_from}): {message}')
 		
 		return {
 			'status': 'OK',
