@@ -59,7 +59,7 @@ class Server(threading.Thread):
 			clt.start()
 
 def main():
-	portnumber = 9001
+	portnumber = 9000
 
 	try:
 		portnumber = int(sys.argv[1])

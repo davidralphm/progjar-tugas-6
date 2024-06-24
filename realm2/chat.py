@@ -6,8 +6,7 @@ import logging
 import socket
 from queue import  Queue
 
-REALM_1_ADDRESS = (('127.0.0.1', 9000))
-REALM_2_ADDRESS = (('127.0.0.1', 9001))
+OTHER_REALM_ADDRESS = (('172.16.16.101', 9000))
 
 class Chat:
 	def __init__(self):
@@ -153,7 +152,7 @@ class Chat:
 
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			sock.connect(REALM_1_ADDRESS)
+			sock.connect(OTHER_REALM_ADDRESS)
 			sock.sendall(command)
 
 			while True:
