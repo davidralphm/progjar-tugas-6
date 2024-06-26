@@ -2,8 +2,8 @@ import socket
 import os
 import json
 
-TARGET_IP = "172.16.16.102"
-TARGET_PORT = 9001
+TARGET_IP = "127.0.0.1"
+TARGET_PORT = 9000
 
 class ChatClient:
     def __init__(self):
