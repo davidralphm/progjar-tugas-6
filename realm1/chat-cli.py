@@ -48,13 +48,13 @@ class ChatClient:
             while True:
                 data = self.sock.recv(64)
 
-                print("diterima dari server",data)
+                # print("diterima dari server",data)
 
                 if data:
                     receivemsg = "{}{}" . format(receivemsg, data.decode()) # data harus didecode agar dapat di operasikan dalam bentuk string
 
                     if receivemsg[-4:] == '\r\n\r\n':
-                        print("end of string")
+                        # print("end of string")
                         return json.loads(receivemsg)
         except Exception as e:
             print(str(e))
@@ -66,7 +66,7 @@ class ChatClient:
             }
 
     def login(self, username, password):
-        string = "auth {} {} \r\n" . format(username, password)
+        string = "auth {} {}\r\n" . format(username, password)
         result = self.sendstring(string)
 
         if result['status'] == 'OK':
@@ -80,7 +80,7 @@ class ChatClient:
         if (self.tokenid == ""):
             return "Error, not authorized"
 
-        string="send {} {} {} \r\n" . format(self.tokenid, usernameto, message)
+        string="send {} {} {}\r\n" . format(self.tokenid, usernameto, message)
         print(string)
         result = self.sendstring(string)
         
@@ -93,7 +93,7 @@ class ChatClient:
         if (self.tokenid == ""):
             return "Error, not authorized"
 
-        string="inbox {} \r\n" . format(self.tokenid)
+        string="inbox {}\r\n" . format(self.tokenid)
         result = self.sendstring(string)
 
         if result['status'] == 'OK':
