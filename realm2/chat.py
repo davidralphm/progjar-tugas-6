@@ -61,9 +61,9 @@ class Chat:
 				sessionid = j[1].strip()
 				usernameto = j[2].strip()
 
-				message = ""
+				message = j[3]
 
-				for w in j[3:]:
+				for w in j[4:]:
 					message = "{} {}" . format(message, w)
 
 				usernamefrom = self.sessions[sessionid]['username']
@@ -75,9 +75,9 @@ class Chat:
 				usernamefrom = j[1].strip()
 				usernameto = j[2].strip()
 
-				message = ""
+				message = j[3]
 
-				for w in j[3:]:
+				for w in j[4:]:
 					message = "{} {}" . format(message, w)
 
 				logging.warning("SEND_MULTIREALM: send message from {} to {}" . format(usernamefrom, usernameto))

@@ -26,9 +26,9 @@ class ChatClient:
                 return self.login(username, password)
             elif (command == 'send'):
                 usernameto = j[1].strip()
-                message = ""
+                message = j[2]
 
-                for w in j[2:]:
+                for w in j[3:]:
                    message = "{} {}" . format(message,w)
 
                 return self.sendmessage(usernameto, message)
