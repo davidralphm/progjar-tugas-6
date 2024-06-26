@@ -97,7 +97,27 @@ class ChatClient:
         result = self.sendstring(string)
 
         if result['status'] == 'OK':
-            return "{}" . format(json.dumps(result['messages']))
+            output = ''
+            messages = result['messages']
+
+            for k, v in messages.items():
+                if len(v) == 0:
+                    continue
+
+                if output == '':
+                    output = f'{k}\n'
+                else:
+                    output = f'{output}\n\n{k}\n'
+
+                for i in v:
+                    output = f'{output}\t{i["msg"]}\n'
+                    # print(f'\t{i["msg"]}')
+            
+            if output == '':
+                return 'No new messages'
+                
+            return output
+            # return "{}" . format(json.dumps(result['messages']))
 
         return "Error, {}" . format(result['message'])
 
